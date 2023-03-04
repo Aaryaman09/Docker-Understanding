@@ -401,3 +401,82 @@ A : In the last example, we have set the dynamic port using the -e option in the
 The CMD instruction in the Dockerfile specifies the command that should be run when the container is started. In this case, it specifies the command gunicorn --bind 0.0.0.0:$PORT app:app, which starts the Gunicorn server and binds it to the port specified by the PORT environment variable.
 
 Since the value of the PORT environment variable is set by the docker run command using the -e option, the value is already available when the container starts. Therefore, there is no need to use sh or -c to set the PORT environment variable dynamically in the CMD instruction. The value is already set and can be used directly in the CMD instruction as $PORT.
+
+> Q : Explain me docker file running a simple flask app with gunicorn with docker run -e PORT=9000 and local host at 8500.
+
+A : I can help you understand the Dockerfile for a simple Flask app with Gunicorn and the command docker run -e PORT=9000 with local host at 8500.
+
+First, let's start with the Dockerfile:
+
+```python
+FROM python:3.9-slim-buster
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+```
+
+Let's go through each line:
+
+1. FROM python:3.9-slim-buster: This line specifies the base image to use for the container. In this case, it's using a slim version of the Python 3.9 image.
+
+2. WORKDIR /app: This line sets the working directory for the container to /app. All subsequent commands will be run in this directory.
+
+3. COPY requirements.txt .: This line copies the requirements.txt file from the host machine to the /app directory in the container.
+
+4. RUN pip install --no-cache-dir -r requirements.txt: This line installs the dependencies specified in the requirements.txt file using pip. The --no-cache-dir flag is used to prevent pip from caching the downloaded packages, which can help reduce the size of the final Docker image.
+
+5. COPY . .: This line copies all the files from the current directory (the directory containing the Dockerfile) to the /app directory in the container.
+
+6. CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]: This line specifies the command to run when the container starts. In this case, it runs the gunicorn command with the --bind option, which tells gunicorn to bind to the IP address 0.0.0.0 and the port specified by the $PORT environment variable (more on this later). The last argument, app:app, tells gunicorn where to find the Flask app to run.
+
+Now, let's move on to the docker run command:
+
+```python
+docker run -e PORT=9000 -p 8500:9000 <image-name>
+```
+
+Here's what each option means:
+
+1. -e PORT=9000: This sets an environment variable PORT with the value 9000. The Flask app will use this port to listen for incoming requests.
+
+2. -p 8500:9000: This maps port 8500 on the host machine to port 9000 in the container. This means that you can access the Flask app by going to http://localhost:8500 in your web browser.
+
+3. <image-name>: This is the name of the Docker image to run. This should be the name of the image that was built using the Dockerfile.
+
+So, when you run the docker run command with the options above, it will start a container with the Flask app running on port 9000, and you can access it on http://localhost:8500 in your web browser.
+
+> Q : Why no ENV PORT & EXPOSE is present in docker file and what are their purposes?
+
+A : You are correct that the Dockerfile shown in the previous answer does not include the ENV PORT or EXPOSE instructions. Let me explain why.
+
+The ENV instruction sets an environment variable in the container. In this case, we need to set the PORT environment variable so that the Flask app knows which port to listen on. However, instead of using ENV, the Dockerfile sets the PORT environment variable through the docker run command using the -e option. This means that the PORT environment variable is set dynamically at runtime, rather than being set statically in the Dockerfile.
+
+The EXPOSE instruction is used to inform Docker that the container will listen on a specified network port at runtime. However, it does not actually publish the port to the host machine. It simply serves as documentation for other developers and users of the image. In the case of this Flask app, the Dockerfile does not include the EXPOSE instruction because it is not necessary. Even though the Dockerfile does not specify the EXPOSE instruction, the container can still listen on a network port at runtime because the gunicorn command used in the CMD instruction binds to a port specified by the PORT environment variable.
+
+In summary, the ENV instruction is not included in the Dockerfile because the PORT environment variable is set dynamically at runtime using the docker run command. The EXPOSE instruction is not included in the Dockerfile because it is not necessary for this Flask app, as the gunicorn command used in the CMD instruction binds to a port specified by the PORT environment variable.
+
+To elaborate further, the ENV instruction is typically used to set environment variables that will be used by applications running inside the container. It allows you to set default values for environment variables that can be overridden at runtime. For example, if your application requires a database connection string, you could set a default value for the connection string using the ENV instruction, but allow it to be overridden by a user-defined environment variable when running the container.
+
+The EXPOSE instruction, on the other hand, documents the ports that the container will listen on at runtime. It does not actually publish the ports to the host machine or allow external access to them. Instead, it serves as a way to document the ports that are intended to be used by the container, and can be used by developers or other users of the image as a reference.
+
+However, when you run the container, you still need to use the -p option with the docker run command to publish the container ports to the host machine and allow external access to them. For example, if your container listens on port 9000, you could publish that port to the host machine by running docker run -p 8500:9000 <image-name>.
+
+In the case of the Flask app with Gunicorn and Dockerfile shown in the previous answer, the ENV instruction is not used because the PORT environment variable is set dynamically at runtime using the -e option with the docker run command. The EXPOSE instruction is not necessary because it is not used to publish the container port to the host machine, and the gunicorn command used in the CMD instruction already binds to a port specified by the PORT environment variable.
+
+> Q : When will EXPOSE will be necessary?
+
+A : The EXPOSE instruction is necessary when you want to document the ports that your container will use at runtime, even though it does not actually publish the ports to the host machine or allow external access to them.
+
+One use case for EXPOSE is when you want to provide information to other developers or users of the image about the network ports that your container listens on. This can help them understand how the container is intended to be used and what ports they should map to the host machine when running the container.
+
+Another use case for EXPOSE is when you are using an orchestration tool like Docker Compose or Kubernetes to manage your containers. These tools use the EXPOSE instruction to determine how to network your containers together, even though the ports are not exposed to the host machine.
+
+It's important to note that even if you use EXPOSE in your Dockerfile, you still need to use the -p option with the docker run command to publish the container ports to the host machine and allow external access to them.
+
+In summary, you would use the EXPOSE instruction when you want to document the ports that your container uses at runtime, or when using an orchestration tool that relies on the EXPOSE instruction. However, it does not actually publish the ports to the host machine or allow external access to them.
