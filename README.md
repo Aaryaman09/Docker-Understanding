@@ -480,3 +480,68 @@ Another use case for EXPOSE is when you are using an orchestration tool like Doc
 It's important to note that even if you use EXPOSE in your Dockerfile, you still need to use the -p option with the docker run command to publish the container ports to the host machine and allow external access to them.
 
 In summary, you would use the EXPOSE instruction when you want to document the ports that your container uses at runtime, or when using an orchestration tool that relies on the EXPOSE instruction. However, it does not actually publish the ports to the host machine or allow external access to them.
+
+> Q : Create a docker file with gunicorn for flask app for cloud deployment on heroku and give me docker run command.
+
+A : an example Dockerfile for a Flask app with Gunicorn that can be deployed on Heroku:
+
+```Dockerfile
+# Use the official Python image as the base image
+FROM python:3.9-slim-buster
+
+# Set the working directory in the container to /app
+WORKDIR /app
+
+# Copy the dependencies file to the working directory and install the dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application's code to the working directory
+COPY . .
+
+# Set the environment variable for Gunicorn
+ENV PYTHONUNBUFFERED=TRUE
+
+# Expose the port that Gunicorn will listen on
+EXPOSE $PORT
+
+# Start Gunicorn
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+```
+
+Here's a brief explanation of what this Dockerfile does:
+
+1. It starts with the official Python 3.9 slim image as the base image.
+2. Sets the working directory to /app.
+3. Copies the requirements.txt file to the container's working directory and installs the Python dependencies using pip.
+4. Copies the rest of the application's code to the container's working directory.
+5. Sets the PYTHONUNBUFFERED environment variable to TRUE to disable Python's output buffering, which can cause delays in logging output.
+6. Exposes the port that Gunicorn will listen on, which is determined by the PORT environment variable.
+7. Starts Gunicorn using the CMD instruction. The --bind option specifies the IP address and port that Gunicorn will listen on, and the app:app argument specifies the name of the Flask application and its instance to be served.
+8. To run this Docker image locally, you can use the following command:
+
+```python
+docker run -it --rm -e PORT=5000 -p 5000:5000 my-flask-app
+```
+
+This command will start a container from the my-flask-app image, set the PORT environment variable to 5000, publish port 5000 to the host machine, and remove the container when it exits. Note that you will need to replace my-flask-app with the name of the image that you built using the docker build command.
+
+> Q : Why here expose was used and not in earlier example
+
+A : In this example Dockerfile, the EXPOSE instruction is used to document the port that the container will listen on for incoming requests. This is important because Heroku requires that the port number be specified using the PORT environment variable, which is set dynamically at runtime.
+
+When deploying a Docker container to Heroku, you need to specify a PORT environment variable that tells Heroku which port to use to route incoming requests to your container. This environment variable is set automatically by Heroku when you deploy your container, and it's recommended that you use it in your Dockerfile to ensure that your container listens on the correct port.
+
+In contrast, the previous example Dockerfile did not use the EXPOSE instruction because it did not rely on a specific environment variable to determine the port number. Instead, the port number was hard-coded in the CMD instruction that started Gunicorn.
+
+In summary, whether or not to use EXPOSE in your Dockerfile depends on your specific use case and requirements. If you need to document the port number that your container will use at runtime or if you are using an orchestration tool that relies on EXPOSE, then you should use the instruction. Otherwise, it's not strictly necessary.
+
+> Q : What is ENV PYTHONUNBUFFERED in docker file and why was it used in last example? Where and when should it be used?
+
+A : The ENV PYTHONUNBUFFERED=TRUE instruction in the Dockerfile sets an environment variable that tells Python to run in unbuffered mode. When Python runs in buffered mode, it delays writing output to stdout and stderr until the buffer is full, which can result in delays in logging output. In contrast, unbuffered mode writes output immediately, which can be useful in production environments where it's important to see log messages as soon as they are generated.
+
+In the example Dockerfile for Heroku, ENV PYTHONUNBUFFERED=TRUE is used to set this environment variable. This ensures that Gunicorn and Flask log messages are output immediately and can be seen in real-time in the logs.
+
+It's generally a good practice to set PYTHONUNBUFFERED=TRUE in production environments where you want to see log messages immediately. However, it's not strictly necessary in all cases, and it can have a performance impact if you have a lot of log messages.
+
+In summary, ENV PYTHONUNBUFFERED=TRUE is used to set an environment variable that tells Python to run in unbuffered mode, which can be useful in production environments where you want to see log messages immediately. It's generally a good practice to set this variable in production environments, but it's not strictly necessary in all cases.
