@@ -629,3 +629,19 @@ A : here you go
 4. Container with specified PORT value passed to container as environment variable: To override the default value of PORT set in the Dockerfile, you can pass a new value for the PORT environment variable using the -e option when running the container with the docker run command. This creates a new container with the specified environment variable value.
 
 5. Container with host-to-container port mapping: Finally, to make the container accessible from outside the container network, you need to map the container's network port to a port on the host machine using the -p option in the docker run command. This creates a new mapping between a port on the host machine and the network port defined in the container. Now you can access the containerized application using the IP address of the host machine and the mapped port number.
+
+> Q : If in a docker file, EXPOSE 6000 & ENV PORT=5500 & gunicorn cmd with bind 0.0.0.0:$PORT for simple flask app. If i pass docker run as -p 7000:6500 and -e PORT=5250. Will this work?
+
+A : In your example, the Dockerfile specifies that the container will listen on port 6000 using the EXPOSE instruction, but also sets an environment variable PORT with a default value of 5500 using the ENV instruction. The gunicorn command uses the value of $PORT to bind the Flask app to the container's network interface using 0.0.0.0:$PORT.
+
+When you run the container with the docker run command, you use the -p option to map port 7000 on the host to port 6500 inside the container, and the -e option to set the PORT environment variable to 5250.
+
+Since the gunicorn command binds to 0.0.0.0:$PORT, the Flask app will listen on the port specified by the $PORT environment variable, which in this case is 5250 due to the -e option. However, since you are using the -p option to map port 7000 on the host to port 6500 inside the container, you will need to access the Flask app using port 7000 on the host, not 6500.
+
+In summary, your command should look like this:
+
+```bash
+docker run -p 7000:6500 -e PORT=5250 my-image
+```
+
+This will start a container based on the my-image Docker image, set the PORT environment variable to 5250, and map port 7000 on the host to port 6500 inside the container. The Flask app inside the container will listen on port 5250, and will be accessible on port 7000 on the host.
