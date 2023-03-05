@@ -545,3 +545,87 @@ In the example Dockerfile for Heroku, ENV PYTHONUNBUFFERED=TRUE is used to set t
 It's generally a good practice to set PYTHONUNBUFFERED=TRUE in production environments where you want to see log messages immediately. However, it's not strictly necessary in all cases, and it can have a performance impact if you have a lot of log messages.
 
 In summary, ENV PYTHONUNBUFFERED=TRUE is used to set an environment variable that tells Python to run in unbuffered mode, which can be useful in production environments where you want to see log messages immediately. It's generally a good practice to set this variable in production environments, but it's not strictly necessary in all cases.
+
+> Q : what does PORT in ENV PORT, EXPOSE $PORT, gunicorn 0.0.0.0:$PORT,docker run -e PORT,container's PORT in docker run mean. Compare them against each other and which value is passed into which variable. show it
+
+A : The PORT variable is used in different contexts in the Docker ecosystem, and its meaning and usage can vary depending on the context. Here's a comparison of the different uses of PORT:
+
+1. ENV PORT - This command in a Dockerfile sets an environment variable named PORT inside the container image. It's used to define the default value for the PORT variable when the container is run. For example, if you have an application that listens on port 8000, you could set ENV PORT 8000 in your Dockerfile so that the container starts with that port as the default.
+
+2. EXPOSE $PORT - This command in a Dockerfile specifies that the container will listen on the network port defined by the PORT environment variable at runtime. The $PORT syntax is used to reference the value of the PORT environment variable. It's important to note that this command does not actually publish the port to the host machine; it simply documents the fact that the container will listen on that port.
+
+3. gunicorn 0.0.0.0:$PORT - This command starts a gunicorn server inside the container, listening on the network port defined by the PORT environment variable. The $PORT syntax is again used to reference the value of the PORT environment variable. This command tells gunicorn to listen on all available network interfaces (0.0.0.0) and the port specified by the PORT variable.
+
+4. docker run -e PORT - This command sets the value of the PORT environment variable when running a container. The -e option is used to set environment variables in the container, and the PORT argument specifies the value to set for the PORT variable. For example, if you want to start a container with PORT=8080, you could use the command docker run -e PORT=8080.
+
+5. Container's PORT in docker run - This command specifies the port mapping between the host and the container. For example, if you want to map port 8080 on the host machine to port 8000 in the container, you would use the command docker run -p 8080:8000. The first port number (8080) specifies the port on the host machine, and the second port number (8000) specifies the port in the container.
+
+To summarize, PORT is used to define the network port that an application inside a container listens on. Its value can be set using environment variables, command-line arguments, or by explicitly specifying the port number in configuration files. The ENV PORT command sets the default value for the PORT variable inside the container image, the EXPOSE $PORT command documents the fact that the container listens on that port, the gunicorn 0.0.0.0:$PORT command starts a gunicorn server listening on that port, the -e PORT option sets the value of the PORT environment variable when starting a container, and the container's PORT in docker run specifies the port mapping between the host and the container.
+
+> Q : Can you show me how are they related to each other as a flowchart?
+
+A : here you go 
+
+```bash
++-------------------------+
+|                         |
+|  Dockerfile definition  |
+|                         |
++-------------------------+
+         |
+         | ENV PORT
+         |
+         v
++-------------------------+
+|                         |
+|   Container image with  |
+|   default PORT value    |
+|                         |
++-------------------------+
+         |
+         | EXPOSE $PORT
+         |
+         v
++-------------------------+
+|                         |
+|  Container with exposed |
+|  PORT, but not mapped   |
+|  to host machine        |
+|                         |
++-------------------------+
+         |
+         | docker run -e PORT
+         |
+         v
++-------------------------+
+|                         |
+| Container with specified|
+| PORT value passed to    |
+| container as environment|
+| variable                |
+|                         |
++-------------------------+
+         |
+         | -p hostPort:containerPort
+         |
+         v
++-------------------------+
+|                         |
+|   Container with        |
+|   host-to-container port|
+|   mapping               |
+|                         |
++-------------------------+
+```
+
+> Explaination : Here's a detailed explanation of the flowchart I provided earlier:
+
+1. Dockerfile definition: This is the first step in creating a Docker container. In a Dockerfile, you can specify instructions for building an image that will be used to create a container. One of the instructions that you can use in a Dockerfile is ENV, which allows you to set environment variables that will be available inside the container.
+
+2. Container image with default PORT value: When you build the Docker image using the Dockerfile, the ENV PORT instruction sets the default value for the PORT environment variable inside the container. This default value can be overridden at runtime using the -e option in the docker run command.
+
+3. Container with exposed PORT, but not mapped to host machine: After building the container image, you can run the container using the docker run command. The EXPOSE $PORT instruction in the Dockerfile tells Docker that the container will listen on the network port defined by the PORT environment variable. However, this command does not actually publish the port to the host machine; it simply documents the fact that the container will listen on that port.
+
+4. Container with specified PORT value passed to container as environment variable: To override the default value of PORT set in the Dockerfile, you can pass a new value for the PORT environment variable using the -e option when running the container with the docker run command. This creates a new container with the specified environment variable value.
+
+5. Container with host-to-container port mapping: Finally, to make the container accessible from outside the container network, you need to map the container's network port to a port on the host machine using the -p option in the docker run command. This creates a new mapping between a port on the host machine and the network port defined in the container. Now you can access the containerized application using the IP address of the host machine and the mapped port number.
